@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graph Visualization with Vis.js</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+    }
+
+    #graph-container {
+      width: 60vw;
+      height: 60vh;
+      border: 1px solid #ccc;
+    }
+
+    #buttons-container {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    button {
+      margin: 5px;
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+  <!-- Vis.js CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">
+</head>
+<body>
+
+<!-- Graph Container -->
+<div id="graph-container"></div>
+
+<!-- Buttons Container -->
+<div id="buttons-container">
+  <button onclick="findArticulationPoints()">Find Articulation Points</button>
+  <button onclick="deleteGraph()">Delete Graph</button>
+  <button onclick="restartGraph()">Draw Random Graph</button>
+  <div id="result1"></div>
+  <div id="result2"></div>
+</div>
+
+<!-- Vis.js JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+
+<script>
+  var nodes = new vis.DataSet([
+    // { id: 1, label: "1" },
+    // { id: 2, label: "2" },
+    // { id: 3, label: "3" },
+    // { id: 4, label: "4" }
+  ]);
+
+  var edges = new vis.DataSet([
+    // { from: 1, to: 2 },
+    // { from: 2, to: 3 },
+    // { from: 3, to: 4 }
+  ]);
+
+  var container = document.getElementById("graph-container");
+  var data = { nodes: nodes, edges: edges };
+  var nbrNodes = 0;
+  var options = {
+    interaction: { hover: true },
+    manipulation: { enabled: true
+    },   
+  };
+  function deleteNodeEdges(node)
+    {
+    	for(var i = 0; i < adj[node].length; i++)
+    	{
+    		var index = adj[adj[node][i]].findIndex(n => n == node);
+    		adj[adj[node][i]].splice(index, 1);
+    	}
+    }
+    function deleteEdges(from, to)
+    {
+    		var index = adj[from].findIndex(n => n == to);
+    		adj[from].splice(index, 1);
+    		index = adj[to].findIndex(n => n == from);
+    		adj[to].splice(index, 1);
+    }
+  var network = new vis.Network(container, data, options);
+
+  function findArticulationPoints() {
+
+    var adj = createAdjacencyList(nodes.get(), edges.get());
+    var V = nodes.length;
+    var articulationPoints = [];
+
+    for (let i = 1; i <= V; i++) {
+      let components = 0;
+      const vis = new Array(V + 1).fill(0);
+
+      for (let j = 1; j <= V; j++) {
+        if (j !== i) {
+          if (!vis[j]) {
+            components++;
+            dfs(adj, V, vis, i, j);
+          }
+        }
+      }
+
+      if (components > 1) {
+        articulationPoints.push(i);
+      }
+    }
+
+    document.getElementById("result1").innerText = "The number of articulation points is " + articulationPoints.length;
+    document.getElementById("result2").innerText = "The  articulation points are " + articulationPoints;
+    colorArticulationPoints(articulationPoints);
+  }
+
+  function restartGraph() {
+    nodes.clear();
+    edges.clear();
+    network.destroy();
+    initGraph();
+    document.getElementById("result").innerText = "";
+    uncolorAllNodes();
+  }
+
+  function deleteGraph() {
+    nodes.clear();
+    edges.clear();
+    // network.destroy();
+    document.getElementById("result").innerText = "";
+    uncolorAllNodes();
+  }
+
+  function initGraph() {
+    nodes.add([
+      { id: 1, label: "1" },
+      { id: 2, label: "2" },
+      { id: 3, label: "3" },
+      { id: 4, label: "4" }
+    ]);
+
+    edges.add([
+      { from: 1, to: 2 },
+      { from: 2, to: 3 },
+      { from: 3, to: 4 }
+    ]);
+
+    network = new vis.Network(container, data, options);
+  }
+
+  function colorArticulationPoints(articulationPoints) {
+    articulationPoints.forEach(nodeId => {
+      colorNode(nodeId);
+    });
+  }
+
+  function uncolorAllNodes() {
+    for (var i = 0; i < nodes.length; i++) {
+      uncolorNode(nodes.getIds()[i]);
+    }
+  }
+
+  function colorNode(nodeId) {
+    var receivedNodes = nodes.get();
+    var objectR = nodes.get(receivedNodes[0]);
+    var nodeToBeColored = objectR[nodeId - 1];
+    
+    nodeToBeColored.color = {
+      border: '#ffe000',
+      background: '#fff000',
+      highlight: {
+        border: '#ffe000',
+        background: '#ffff00'
+      },
+      hover: {
+        border: '#ffe000',
+        background: '#ffff00'
+      }
+    }
+    nodes.update(objectR);
+  }
+
+  function uncolorNode(nodeId) {
+    var nodeToBeUncolored = nodes.get(nodeId);
+
+    nodeToBeUncolored.color = {
+      border: '#2B7CE9',
+      background: '#97C2FC',
+      highlight: {
+        border: '#2B7CE9',
+        background: '#D2E5FF'
+      },
+      hover: {
+        border: '#2B7CE9',
+        background: '#D2E5FF'
+      }
+    }
+    nodes.update(nodeToBeUncolored);
+  }
+
+  function dfs(adj, V, vis, i, curr) {
+    vis[curr] = 1;
+    for (let x of adj[curr]) {
+      if (x !== i) {
+        if (!vis[x]) {
+          dfs(adj, V, vis, i, x);
+        }
+      }
+    }
+  }
+
+  function createAdjacencyList(receivedNodes, receivedEdges) {
+    console.log("received ones");
+    console.log(receivedNodes);
+    // console.log(receivedEdges);
+    // var objectR = nodes.get(receivedNodes[0]);
+    // console.log(objectR);
+    // objectR[0].label = "1"
+    // objectR[1].label = "2"
+    // objectR[2].label = "3"
+    // console.log(objectR);
+    // nodes.update(objectR)
+    
+    if (isCustomArray(receivedNodes) || isCustomArray(receivedEdges)) {
+
+
+        var regularNodes = transformNodes(receivedNodes);
+        const existingNode = nodes.get(receivedNodes[0]);
+        regularNodes.forEach(node => {
+         
+        if (existingNode[node.id - 1]) {
+            existingNode[node.id - 1].label = String(node.id);
+        }
+        });
+        nodes.update(existingNode);
+
+        
+         regularNodes = transformNodes(receivedNodes);
+         var regularEdges = transformEdges(receivedEdges);
+        
+    }
+    console.log("transformed ones");
+    console.log(regularNodes);
+    console.log(regularEdges);
+    
+
+    const adj = new Array(nodes.length + 1).fill().map(() => []);
+    regularEdges.forEach(edge => {
+      adj[edge.from].push(edge.to);
+      adj[edge.to].push(edge.from);
+    });
+    return adj;
+  }
+
+  // Function to transform custom nodes to regular nodes
+function transformNodes(customNodes) {
+  return customNodes.map((customNode, index) => ({
+    id: index + 1, 
+    label: (index + 1).toString(), 
+    x: customNode.x,
+    y: customNode.y
+  }));
+}
+
+// Function to transform custom edges to regular edges
+function transformEdges(customEdges) {
+  return customEdges.map(customEdge => ({
+    from: getNodeID(customEdge.from),
+    to: getNodeID(customEdge.to),
+    id: customEdge.id
+  }));
+}
+
+// Helper function to get the regular node ID from a custom node ID
+function getNodeID(customNodeID) {
+  var receivedNodes =  Array.from(nodes.get());
+  return receivedNodes.findIndex(node => node.id === customNodeID) + 1;
+}
+
+function isCustomArray(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) {
+    return false;
+  }
+
+  const sampleElement = arr[0];
+
+  if (typeof sampleElement !== 'object' || sampleElement === null) {
+    return false;
+  }
+
+  if ('id' in sampleElement && 'x' in sampleElement && 'y' in sampleElement) {
+    // Check for nodes
+    return true;
+  }
+
+  if ('from' in sampleElement && 'to' in sampleElement && 'id' in sampleElement) {
+    // Check for edges
+    return true;
+  }
+
+  return false;
+}
+
+</script>
+
+</body>
+</html>
